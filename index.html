@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Happy Diwali – शुभ दीपावली</title>
+<meta property="og:title" content="शुभ दीपावली! Happy Diwali">
+<meta property="og:description" content="Diwali wishes, lit with love.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi&family=Mukta:wght@300;500&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#ffc857;--saffron:#ff8c1a;--rose:#ff4d8d;--ink:#12062b;--cream:#fff3dc}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--cream);font-family:'Mukta',system-ui,sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.greet{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 1.25rem 18vh;pointer-events:none}
+.greet>*{opacity:0;transform:translateY(14px);transition:opacity 1.8s ease,transform 1.8s ease}
+.greet.on>*{opacity:1;transform:none}
+.greet.on>.l2{transition-delay:.8s}.greet.on>.l3{transition-delay:1.6s}.greet.on>.l4{transition-delay:2.6s}
+h1{font-family:'Tiro Devanagari Hindi',serif;font-weight:400;font-size:clamp(2.6rem,10vw,6.5rem);line-height:1.1;
+ color:var(--gold);text-shadow:0 0 28px rgba(255,140,26,.7),0 0 70px rgba(255,77,141,.35)}
+.l2{font-size:clamp(1.3rem,4vw,2.2rem);font-weight:300;letter-spacing:.12em;margin-top:.4rem}
+.l3{max-width:34ch;margin-top:1.1rem;font-size:clamp(1rem,2.6vw,1.3rem);line-height:1.6;color:#ffe3b3}
+.l4{margin-top:1.4rem;font-size:clamp(1.2rem,3.4vw,1.8rem);font-weight:500;color:var(--gold)}
+.l4{display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.l4 small{font-size:.8em;font-weight:300;color:#ffe3b3;letter-spacing:.08em}
+.l4 b{font-family:'Tiro Devanagari Hindi',serif;font-weight:400;font-size:1.35em;
+ background:linear-gradient(90deg,#ffc857,#fff,#ff8c1a,#ffc857);background-size:250% 100%;
+ -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 4s linear infinite}
+.l4::after{content:"";width:min(220px,50vw);height:1px;margin-top:.5rem;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+@keyframes shine{to{background-position:-250% 0}}
+.hint{position:fixed;bottom:.7rem;left:0;right:0;text-align:center;font-size:.85rem;color:#c9b3e6;opacity:0;transition:opacity 2s}
+.hint.on{opacity:.8}
+@media (prefers-reduced-motion:reduce){.greet>*{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="greet" id="greet">
+  <h1 class="l1">Happy Diwali</h1>
+  <p class="l2">Wishing You a Bright &amp; Prosperous Festival of Lights</p>
+  <p class="l3">May this Diwali bring you good health, lasting success and happiness to you and your family.</p>
+  <p class="l4"><small>Warm regards</small><b id="name"></b></p>
+</div>
+<p class="hint" id="hint">Tap anywhere to light a firework</p>
+
+<script>
+// ====== APNA NAAM YAHAN LIKHO ======
+const MY_NAME = "Sharjil Zaidi";
+// Link ke end mein ?name=Rahul lagake bhi naam badal sakte ho
+const NAME = new URLSearchParams(location.search).get('name') || MY_NAME;
+document.getElementById('name').textContent = NAME;
+document.title = "Happy Diwali from " + NAME;
+
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+let W, H, DPR;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener('resize',resize);resize();
+
+const R=(a,b)=>a+Math.random()*(b-a);
+const clamp=v=>Math.max(0,Math.min(1,v));
+const fade=(t,s,d=2)=>clamp((t-s)/d);
+const COLORS=[[255,200,87],[255,140,26],[255,77,141],[120,220,255],[190,130,255],[255,255,255]];
+
+const stars=Array.from({length:140},()=>({x:Math.random(),y:Math.random()*.75,r:R(.4,1.6),p:R(0,6.28),s:R(.8,2.4)}));
+const lanterns=Array.from({length:8},(_,i)=>({x:i%2?.86+R(0,.1):.04+R(0,.1),y:R(.2,1.1),w:R(26,44)*(innerWidth<600?.7:1),sp:R(8,16),ph:R(0,6),h:R(20,40)}));
+let rockets=[],parts=[];
+const petals=Array.from({length:26},()=>({x:Math.random(),y:Math.random(),s:R(5,10),sp:R(18,40),sw:R(.5,1.5),ph:R(0,6),rot:R(0,6),c:Math.random()<.6?'#ff9d1c':'#ffc857'}));
+function moon(a){
+  const x=W*.82,y=H*.2,r=Math.min(W,H)*.06;
+  const gl=g.createRadialGradient(x,y,r*.5,x,y,r*4);
+  gl.addColorStop(0,`rgba(255,235,190,${.35*a})`);gl.addColorStop(1,'rgba(255,235,190,0)');
+  g.fillStyle=gl;g.fillRect(x-r*4,y-r*4,r*8,r*8);
+  g.globalAlpha=a;g.fillStyle='#ffeccc';g.beginPath();g.arc(x,y,r,0,6.283);g.fill();
+  g.fillStyle='#1c0a3d';g.beginPath();g.arc(x+r*.45,y-r*.15,r*.9,0,6.283);g.fill();g.globalAlpha=1;
+}
+function petalFall(t,dt,a){
+  for(const p of petals){
+    p.y+=p.sp*dt/H;if(p.y>1.05){p.y=-.05;p.x=Math.random()}
+    const x=p.x*W+Math.sin(t*p.sw+p.ph)*30,y=p.y*H;
+    g.save();g.translate(x,y);g.rotate(p.rot+t*p.sw);g.globalAlpha=a*.85;g.fillStyle=p.c;
+    g.beginPath();g.ellipse(0,0,p.s,p.s*.45,0,0,6.283);g.fill();g.restore();
+  }
+  g.globalAlpha=1;
+}
+
+function launch(tx,ty){
+  const x=tx??R(W*.12,W*.88), y=ty??R(H*.12,H*.45);
+  rockets.push({x:tx??x+R(-40,40),y:H+10,vx:0,vy:-R(520,680)*(H/800+.4),ty:y,tx:x,c:COLORS[Math.random()*COLORS.length|0]});
+}
+function burst(x,y,c){
+  const n=W<600?60:100, big=Math.random()<.3;
+  for(let i=0;i<n;i++){
+    const a=Math.PI*2*i/n+R(-.05,.05), s=R(60,big?300:220)*(W<600?.7:1);
+    parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,dec:R(.45,.8),c,sp:true});
+  }
+}
+
+function rangoli(cx,cy,r,rot,a){
+  g.save();g.translate(cx,cy);g.rotate(rot);g.globalAlpha=a;
+  const cols=['#ff4d8d','#ffc857','#ff8c1a','#7a3cff','#2dd4bf'];
+  for(let ring=0;ring<4;ring++){
+    const n=8+ring*4, rr=r*(1-ring*.2);
+    for(let i=0;i<n;i++){
+      g.save();g.rotate(Math.PI*2*i/n+(ring%2)*.2);g.translate(0,-rr*.62);
+      g.fillStyle=cols[(i+ring)%5];g.globalAlpha=a*.85;
+      g.beginPath();g.ellipse(0,0,rr*.1,rr*.24,0,0,6.283);g.fill();
+      g.fillStyle='#fff3dc';g.globalAlpha=a*.9;g.beginPath();g.arc(0,-rr*.26,rr*.025,0,6.283);g.fill();
+      g.restore();
+    }
+  }
+  g.globalAlpha=a;g.fillStyle='#ffc857';g.beginPath();g.arc(0,0,r*.09,0,6.283);g.fill();
+  g.restore();
+}
+
+function lantern(l,t,a){
+  const x=l.x*W+Math.sin(t*.6+l.ph)*8, y=((l.y*H-t*l.sp)%(H*1.3)+H*1.3)%(H*1.3)-H*.1;
+  const w=l.w,h=l.w*1.3;
+  const gl=g.createRadialGradient(x,y,2,x,y,w*2.4);
+  gl.addColorStop(0,`rgba(255,170,60,${.45*a})`);gl.addColorStop(1,'rgba(255,140,26,0)');
+  g.fillStyle=gl;g.fillRect(x-w*2.4,y-w*2.4,w*4.8,w*4.8);
+  g.globalAlpha=a;
+  g.fillStyle='#ff8c1a';g.beginPath();g.roundRect(x-w/2,y-h/2,w,h,w*.3);g.fill();
+  g.fillStyle='rgba(255,230,150,.75)';g.beginPath();g.roundRect(x-w*.28,y-h*.4,w*.56,h*.8,w*.2);g.fill();
+  g.fillStyle='#b84a00';g.fillRect(x-w*.32,y-h/2-3,w*.64,4);g.fillRect(x-w*.32,y+h/2-1,w*.64,4);
+  g.globalAlpha=1;
+}
+
+function diya(x,y,s,t,a,seed){
+  g.save();g.globalAlpha=a;g.translate(x,y);
+  const f=1+Math.sin(t*9+seed)*.08+Math.sin(t*13+seed*2)*.05;
+  const gl=g.createRadialGradient(0,-s*.4,1,0,-s*.4,s*3);
+  gl.addColorStop(0,'rgba(255,190,80,.55)');gl.addColorStop(1,'rgba(255,140,26,0)');
+  g.fillStyle=gl;g.fillRect(-s*3,-s*3.4,s*6,s*6);
+  g.fillStyle='#c4521a';g.beginPath();g.moveTo(-s,-s*.2);g.quadraticCurveTo(0,s*.9,s,-s*.2);g.quadraticCurveTo(0,-s*.45,-s,-s*.2);g.fill();
+  g.fillStyle='#ffb347';g.beginPath();g.moveTo(-s*.9,-s*.2);g.quadraticCurveTo(0,-s*.5,s*.9,-s*.2);g.quadraticCurveTo(0,-s*.1,-s*.9,-s*.2);g.fill();
+  g.fillStyle='#ffe08a';g.beginPath();g.moveTo(0,-s*1.5*f);g.quadraticCurveTo(s*.4,-s*.7,0,-s*.3);g.quadraticCurveTo(-s*.4,-s*.7,0,-s*1.5*f);g.fill();
+  g.restore();
+}
+
+let t0=performance.now(),last=t0,autoT=0,paused=false;
+const greet=document.getElementById('greet'),hint=document.getElementById('hint');
+let titled=false;
+
+function frame(now){
+  const dt=Math.min((now-last)/1000,.05);last=now;
+  const t=(now-t0)/1000;
+  const sky=g.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#0a0420');sky.addColorStop(.6,'#2a0d4a');sky.addColorStop(1,'#5a1650');
+  g.fillStyle=sky;g.fillRect(0,0,W,H);
+
+  const aStar=fade(t,0.3,2.5);
+  for(const s of stars){
+    g.globalAlpha=aStar*(.5+.5*Math.sin(t*s.s+s.p));
+    g.fillStyle='#fff';g.beginPath();g.arc(s.x*W,s.y*H,s.r,0,6.283);g.fill();
+  }
+  g.globalAlpha=1;
+
+  // string lights across the top
+  const aLight=fade(t,1.8,2);
+  if(aLight>0){
+    for(let i=0;i<=24;i++){
+      const x=i/24*W, y=18+Math.sin(i/24*Math.PI*4)*10+Math.sin(i/24*Math.PI)*8;
+      const c=COLORS[i%5]; const tw=.6+.4*Math.sin(t*3+i);
+      g.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${.9*aLight*tw})`;
+      g.shadowColor=`rgb(${c})`;g.shadowBlur=12;g.beginPath();g.arc(x,y,3.2,0,6.283);g.fill();
+    }
+    g.shadowBlur=0;
+  }
+
+  const aMoon=fade(t,1.5,3);if(aMoon>0)moon(aMoon);
+  const aLan=fade(t,3.5,2.5);
+  if(aLan>0) for(const l of lanterns) lantern(l,t-3.5,aLan);
+
+  if(t>7)petalFall(t,dt,fade(t,7,3));
+  const aRan=fade(t,6,2.5);
+  if(aRan>0){const r=Math.min(W*.42,H*.36);rangoli(W/2,H+r*.2,r,t*.05,aRan)}
+
+  const aDiya=fade(t,8.5,2.5);
+  if(aDiya>0){
+    const n=W<600?5:9, s=Math.max(10,Math.min(W/(n*3.2),22));
+    for(let i=0;i<n;i++){
+      const x=(i+.5)/n*W, y=H-s*1.3-Math.abs(Math.sin((i/(n-1))*Math.PI))*0;
+      diya(x,y,s,t,aDiya,i*1.7);
+    }
+  }
+
+  if(t>11.5&&!paused){
+    autoT-=dt;
+    if(autoT<=0){launch();autoT=R(.5,1.1)}
+    if(!titled){titled=true;greet.classList.add('on');setTimeout(()=>hint.classList.add('on'),5000)}
+  }
+
+  g.globalCompositeOperation='lighter';
+  for(let i=rockets.length-1;i>=0;i--){
+    const r=rockets[i];
+    r.x+=(r.tx-r.x)*dt*1.2;r.y+=r.vy*dt;r.vy*=.992;
+    parts.push({x:r.x,y:r.y,vx:R(-12,12),vy:R(10,40),life:.7,dec:2.2,c:r.c,sp:false});
+    g.fillStyle='#fff';g.beginPath();g.arc(r.x,r.y,2.2,0,6.283);g.fill();
+    if(r.y<=r.ty||r.vy>-80){burst(r.x,r.y,r.c);rockets.splice(i,1)}
+  }
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];
+    p.life-=p.dec*dt;if(p.life<=0){parts.splice(i,1);continue}
+    if(p.sp){p.vy+=90*dt;p.vx*=.985;p.vy*=.985}
+    p.x+=p.vx*dt;p.y+=p.vy*dt;
+    g.fillStyle=`rgba(${p.c[0]},${p.c[1]},${p.c[2]},${p.life})`;
+    g.beginPath();g.arc(p.x,p.y,p.sp?2.2*p.life+.4:1.6,0,6.283);g.fill();
+  }
+  g.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// Tap / click = firework at that spot
+function tap(e){
+  const p=e.touches?e.touches[0]:e;
+  rockets.push({x:p.clientX,y:H+10,vx:0,vy:-900,ty:p.clientY,tx:p.clientX,c:COLORS[Math.random()*COLORS.length|0]});
+}
+addEventListener('pointerdown',tap);
+addEventListener('pointermove',e=>{
+  if(t0&&performance.now()-t0<8000)return;
+  for(let i=0;i<2;i++)parts.push({x:e.clientX,y:e.clientY,vx:R(-30,30),vy:R(-30,30),life:.8,dec:1.6,c:[255,200,87],sp:false});
+});
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();for(let i=0;i<14;i++)setTimeout(()=>launch(),i*120)}
+  if(e.key==='p'||e.key==='P')paused=!paused;
+});
+</script>
+</body>
+</html>
